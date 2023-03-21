@@ -7,8 +7,8 @@ Input data:
   
 To generate the image, simply clone the repository:
 
-   git clone git@github.com:fredericlemoine/reprohackathon_ismb2023.git
-   cd reprohackathon_ismb202/figure_upsetplot
-   snakemake -s Snakefile --use-apptainer -c 4
+    git clone git@github.com:fredericlemoine/reprohackathon_ismb2023.git
+    cd reprohackathon_ismb202/figure_upsetplot
+    snakemake -s Snakefile --use-apptainer -c 4
    
    
