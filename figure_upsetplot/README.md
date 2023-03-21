@@ -12,3 +12,11 @@ To generate the image, simply clone the repository:
     snakemake -s Snakefile --use-singularity -c 4
     
 the singularity/apptainer is used to download an image with a specific version of R/DESeq2 package to ensure full reproducibility of the R computation. For Python, the Snakemake file relies on pandas, UpSetPlot and Snakemake. Figure generated with pandas 1.5.3, UpSetPlot 0.8.0 and snakemake 7.20.0.
+
+upset plot using DGE results from students:
+
+![upset plot using students results](upset_deseq.png)
+
+upset plot using DGE results from unique R script:
+
+![upset plot using counts and identical R script](upset_std_deseq.png)
