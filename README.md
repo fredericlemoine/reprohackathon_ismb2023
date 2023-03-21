@@ -1,1 +1,1 @@
-# figure 6 of the ISMB paper
+# Material to reproduce figures of the ISMB2023 paper
