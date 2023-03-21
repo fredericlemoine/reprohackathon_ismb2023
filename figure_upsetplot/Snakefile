@@ -1,0 +1,130 @@
+"""Input data is made of counts.txt in 11 groups.
+From these counts, a unique R scripts is used to 
+generate the DGE and a upsetplot. 
+In addition, using the DGE from students, another upsetplot
+can be generated to see the impact of the R scripts that may differ
+from one student to another
+"""
+
+
+# Requires the counts.txt given by the students.
+import matplotlib
+matplotlib.use('agg')
+
+
+Ngroup = 11
+
+rule all:
+    input: 
+        "upset_std_deseq.pdf", "upset_std_deseq.png", "upset_std_deseq.svg",
+        "upset_deseq.pdf", "upset_deseq.png", "upset_deseq.svg"
+
+
+rule counts_to_std_dge:
+    input:
+        counts="{group}/counts.txt"
+    output:
+        gene_diff="{group}/std_gene_diff.csv"
+    container:
+        "https://zenodo.org/record/5801842/files/rtools_1.0.0.img"
+    log: "{group}/fc_to_diff.log"
+    shell:
+        r"""
+cat <<'EOF' > {rule}.$$.tmp.R
+
+library("DESeq2")
+counts <- read.delim("{input.counts}", comment.char="#", stringsAsFactors=TRUE)
+rownames(counts) <- counts$Geneid
+counts <- counts[,-c(1:6)]
+cond <- factor(c(1,1,1,2,2,2,2,2)) # 1=Mut, 2=WT
+dds <- DESeqDataSetFromMatrix(counts, DataFrame(cond), design = ~ cond)
+dds <- DESeq(dds)
+results <- results(dds)
+write.csv(as.data.frame(results), file="{output.gene_diff}")
+
+EOF
+Rscript {rule}.$$.tmp.R 1>{log} 2>>{log}
+rm {rule}.$$.tmp.R
+        """
+
+
+rule std_gene_diff_to_dge:
+    input:
+        gene_diff="{group}/std_gene_diff.csv"
+    output:
+        std_dge="{group}/std_dge.csv",
+        std_dge_up="{group}/std_up_dge.csv",
+        std_dge_down="{group}/std_down_dge.csv"
+    params:
+        padj=0.05,
+        l2FC=1
+    run:
+        import pandas as pd
+
+        df = pd.read_csv(input.gene_diff, index_col=0)
+
+        padj = params.padj
+        l2FC = params.l2FC
+        with open(output.std_dge_up, "w") as fout:
+            fout.write("\n".join(df.query("padj<@padj and (log2FoldChange>@l2FC)").index.values))
+
+        with open(output.std_dge_down, "w") as fout:
+            fout.write("\n".join(df.query("padj<@padj and (log2FoldChange<-@l2FC)").index.values))
+
+        with open(output.std_dge, "w") as fout:
+            fout.write("\n".join(df.query("padj<@padj and (log2FoldChange<-@l2FC or log2FoldChange>@l2FC)").index.values))
+
+
+rule upset_std:
+    """Upset plot of the DGE generated from the counts"""
+    input:
+        expand("group{group}/std_dge.csv", group=range(1, Ngroup+1))
+    output:
+        pdf="upset_std_deseq.pdf",
+        png="upset_std_deseq.png",
+        svg="upset_std_deseq.svg"
+
+    run:
+        from pylab import savefig
+        import pandas as pd
+        from pandas.errors import EmptyDataError
+        from upsetplot import from_contents, UpSet
+
+        def read_csv(filename):
+            try:
+                data = pd.read_csv(filename, header=None).T.values[0]
+                return data
+            except EmptyDataError:
+                return ['dummy']
+
+        data = { f'{x}': read_csv(f"group{x}/std_dge.csv") for x in range(1, Ngroup+1)}
+        data = from_contents(data)
+        UpSet(data).plot()
+
+        savefig(output.svg, dpi=200)
+        savefig(output.pdf, dpi=200)
+        savefig(output.png, dpi=200)
+
+
+rule upset_student:
+    """Upset plot of the DGE provided by students"""
+    input:
+        expand("group{group}/dge.csv", group=range(1, Ngroup+1))
+    output:
+        pdf="upset_deseq.pdf",
+        png="upset_deseq.png",
+        svg="upset_deseq.svg"
+    run:
+
+        from pylab import savefig
+        import pandas as pd
+        from upsetplot import from_contents, UpSet
+
+        data = { f'{x}': pd.read_csv(f"group{x}/dge.csv").T.values[0] for x in range(1, Ngroup+1)}
+        data = from_contents(data)
+        UpSet(data).plot()
+
+        savefig(output.svg, dpi=200)
+        savefig(output.pdf, dpi=200)
+        savefig(output.png, dpi=200)
+
