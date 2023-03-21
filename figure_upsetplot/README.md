@@ -9,6 +9,6 @@ To generate the image, simply clone the repository:
 
     git clone git@github.com:fredericlemoine/reprohackathon_ismb2023.git
     cd reprohackathon_ismb202/figure_upsetplot
-    snakemake -s Snakefile --use-apptainer -c 4
-   
-   
+    snakemake -s Snakefile --use-singularity -c 4
+    
+the singularity/apptainer is used to download an image with a specific version of R/DESeq2 package to ensure full reproducibility of the R computation. For Python, the Snakemake file relies on pandas, UpSetPlot and Snakemake. Figure generated with pandas 1.5.3, UpSetPlot 0.8.0 and snakemake 7.20.0.
